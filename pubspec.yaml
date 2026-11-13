@@ -1,0 +1,38 @@
+name: scene_vrm
+description: VRM loader for Flutter Scene.
+version: 0.1.0
+repository: https://github.com/suichu/scene_vrm
+
+environment:
+  sdk: ^3.14.0
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_scene: ^0.24.3
+  gltfx: ^0.1.0
+  gltfx_ext_vrm: ^0.1.0
+  hooks: ^2.2.0
+  vector_math: ^2.4.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  assets:
+    - flutter_scene_generated/
+    - path: flutter_scene_generated/metal_ios/
+      platforms: [ios]
+    - path: flutter_scene_generated/metal_desktop/
+      platforms: [macos]
+    - path: flutter_scene_generated/opengl_es_vulkan/
+      platforms: [android, linux, windows]
+    - path: flutter_scene_generated/opengl_es/
+      platforms: [web]

@@ -1,0 +1,109 @@
+material {
+  name: "MToon",
+  shading_model: unlit,
+  blending: alpha,
+  culling: back,
+  depth_write: true,
+  parameters: [
+    { type: vec4, name: color },
+    { type: sampler2d, name: base_color_texture },
+    { type: vec4, name: shade_color },
+    { type: sampler2d, name: shade_color_texture },
+    { type: float, name: shading_shift, default: 0 },
+    { type: sampler2d, name: shading_shift_texture },
+    { type: float, name: shading_toony, default: 0.9 },
+    // GI
+    { type: float, name: gi_equalization_factor },
+    // Emission
+    { type: vec3, name: emissive_factor },
+    { type: sampler2d, name: emissive_texture },
+    { type: float, name: emissive_strength, default: 1.0 },
+    // Rim
+    { type: vec3, name: matcap_factor },
+    { type: sampler2d, name: matcap_texture },
+    { type: vec3, name : rim_color },
+    { type: sampler2d, name: rim_texture},
+    { type: float, name : rim_power },
+    { type: float, name : rim_lift },
+    { type: float, name: rim_mix },
+    // Lighting
+    { type: vec3, name: sun_direction },
+    { type: vec4, name: sun_color },
+    { type: sampler2d, name: irradiance_field },
+    { type: float, name: environment_intensity },
+    // UV Animation
+    { type: sampler2d, name: uv_animation_mask },
+    { type: vec2, name: uv_scroll },
+    { type: float, name: uv_rotation }
+  ],
+}
+
+fragment {
+  vec3 DiffuseShCoefficient(sampler2D coefficients, int i, int row) {
+    return texelFetch(coefficients, ivec2(i, row), 0).xyz;
+  }
+  
+  vec3 EvaluateDiffuseSH(sampler2D coefficients, vec3 n, int row) {
+    return DiffuseShCoefficient(coefficients, 0, row) * 0.282095 +
+          DiffuseShCoefficient(coefficients, 1, row) * (0.488603 * n.y) +
+          DiffuseShCoefficient(coefficients, 2, row) * (0.488603 * n.z) +
+          DiffuseShCoefficient(coefficients, 3, row) * (0.488603 * n.x) +
+          DiffuseShCoefficient(coefficients, 4, row) * (1.092548 * n.x * n.y) +
+          DiffuseShCoefficient(coefficients, 5, row) * (1.092548 * n.y * n.z) +
+          DiffuseShCoefficient(coefficients, 6, row) *
+              (0.315392 * (3.0 * n.z * n.z - 1.0)) +
+          DiffuseShCoefficient(coefficients, 7, row) * (1.092548 * n.x * n.z) +
+          DiffuseShCoefficient(coefficients, 8, row) *
+              (0.546274 * (n.x * n.x - n.y * n.y));
+  }
+  
+  vec3 rawGI(vec3 n) {
+    return EvaluateDiffuseSH(irradiance_field, n, 0);
+  }
+  
+  float linearstep(float a, float b, float t) {
+    return clamp((t - a) / (b - a), 0.0, 1.0);
+  }
+  
+  float getNdotV() {
+    vec3 view = GetViewDirection();
+    vec3 normal = GetWorldNormal();
+    return dot(normal, view);
+  }
+  
+  vec3 uniformed_gi = (rawGI(vec3(0, 1.0, 0)) + rawGI(vec3(0, -1.0, 0))) / 2.0;
+
+  void Surface(inout MaterialInputs material) {
+    vec3 normal = GetWorldNormal();
+    vec3 travel = -material_params.sun_direction;
+    float ndotl = dot(normal, travel);
+    float shading = ndotl + material_params.shading_shift;
+    float shading_toony_factor = material_params.shading_toony;
+    vec2 uv0 = GetUV0();
+    shading = linearstep( -1.0 + shading_toony_factor, 1.0 - shading_toony_factor, shading);
+
+    vec4 colorSample = texture(base_color_texture, uv0);
+    vec4 lit = material_params.color * vec4(SRGBToLinear(colorSample.rgb), colorSample.a);
+    vec4 shade = material_params.shade_color * vec4(SRGBToLinear(texture(shade_color_texture, uv0).rgb), 1.0);
+    vec3 color = mix(shade.rgb, lit.rgb, shading);
+    color *= material_params.sun_color.rgb / kPi;
+    
+    vec3 passthrough_gi = rawGI(GetWorldNormal());
+    vec3 gi = mix(passthrough_gi, uniformed_gi, material_params.gi_equalization_factor) * lit.rgb * material_params.environment_intensity;
+    
+    float rim_factor = clamp(1.0 - getNdotV() + material_params.rim_lift, 0.0, 1.0);
+    rim_factor = pow(rim_factor, max(material_params.rim_power, 1e-6));
+    vec3 rim = rim_factor * material_params.rim_color *
+      SRGBToLinear(texture(rim_texture, uv0).rgb);
+
+    vec3 emissive = material_params.emissive_factor *
+      material_params.emissive_strength *
+      SRGBToLinear(texture(emissive_texture, uv0).rgb);
+    vec3 emission = emissive * lit.a;
+
+    material.emissive = emissive;
+    material.base_color = vec4(color + gi + rim + emission, lit.a);
+
+    PrepareMaterial(material);
+  }
+}

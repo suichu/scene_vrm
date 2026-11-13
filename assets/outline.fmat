@@ -1,0 +1,26 @@
+material {
+  name: "MToonOutline",
+  shading_model: unlit,
+  blending: alpha,
+  culling: front,
+  depth_write: true,
+  parameters: [
+    { type: int, name: outline_mode },
+    { type: float, name: outline_width },
+    { type: vec4, name: outline_color },
+    { type: sampler2d, name: outline_texture }
+  ],
+}
+
+vertex {
+  void Vertex(inout VertexInputs vertex) {
+    vertex.world_position.xyz += vertex.world_normal * material_params.outline_width;
+  }
+}
+
+fragment {
+  void Surface(inout MaterialInputs material) {
+    material.base_color = material_params.outline_color;
+    PrepareMaterial(material);
+  }
+}
