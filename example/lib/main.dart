@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:scene_vrm/scene_vrm.dart';
@@ -137,10 +138,15 @@ class _ViewerState extends State<_Viewer> with SingleTickerProviderStateMixin {
     lookAt: Vector3(0.0, 0.5, 0.0),
   );
   bool _initialized = false;
+  late Ticker _ticker;
 
   @override
   void initState() {
     super.initState();
+
+    _ticker = createTicker((_) {
+      setState(() {});
+    });
 
     loadVrmBytes(widget.blob)
         .then((avatar) async {
@@ -153,10 +159,7 @@ class _ViewerState extends State<_Viewer> with SingleTickerProviderStateMixin {
             clip.play();
           }
 
-          final ticker = createTicker((_) {
-            setState(() {});
-          });
-          ticker.start();
+          _ticker.start();
 
           final bytes = await rootBundle.load("assets/lightroom_14b.hdr");
           final env = await EnvironmentMap.fromEquirectImageBytes(
@@ -191,8 +194,9 @@ class _ViewerState extends State<_Viewer> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
-    super.dispose();
+    _ticker.dispose();
     orbit.dispose();
+    super.dispose();
   }
 
   @override
