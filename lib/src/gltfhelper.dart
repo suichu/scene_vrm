@@ -5,7 +5,6 @@ Matrix4 getNodeWorldMatrix(GltfDocument document, GltfNode node) {
   final i =
       document.nodes.indexed.firstWhere((i) => i.$2 == node).$1 as NodeIdx;
   final m = getNodeMatrix(node);
-  ;
 
   for (final p in document.nodes.items) {
     if (p.children.contains(i)) {

@@ -6,3 +6,4 @@ export 'src/animation.dart'
 export 'src/mtoon.dart' show MToonMaterial;
 export 'src/expression.dart';
 export 'src/lookat.dart';
+export 'src/node_constraint.dart';
