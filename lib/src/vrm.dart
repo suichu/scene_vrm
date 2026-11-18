@@ -16,13 +16,34 @@ enum VrmSpecVersion {
   v1,
 }
 
+/// Component that holds the VRM data of a loaded model.
+///
+/// Attached to the root node returned by `loadVrmAsset` / `loadVrmBytes`.
+/// Provides access to the humanoid skeleton, expressions, look-at and
+/// metadata, and drives VRM animations every frame.
 class Vrm extends Component {
+  /// Expressions (blend shapes) of the model.
   final Expressions expressions;
+
+  /// Humanoid bones of the model.
   final HumanSkeleton skeleton;
+
+  /// Eye gaze control, or null if the model does not define it.
   final LookAt? lookAt;
+
+  /// VRM specification version the model was loaded from.
   final VrmSpecVersion specVersion;
+
+  /// Model metadata in VRM 1.0 form.
+  ///
+  /// For VRM 0.x models this is converted from [meta0].
   final vrmext.VrmcVrmMeta meta;
+
+  /// Original VRM 0.x metadata, or null for VRM 1.0 models.
   final vrmext.VrmMeta? meta0;
+
+  /// Player that updates the animation clips created by
+  /// [createAnimationClip].
   final player = VrmAnimationPlayer();
   final Map<HumanBoneName, HumanBone> _boneMap = {};
 
@@ -39,6 +60,9 @@ class Vrm extends Component {
     }
   }
 
+  /// Loads from the VRM 1.0 `VRMC_vrm` extension.
+  ///
+  /// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0/README.md
   factory Vrm.import(
     vrmext.VrmcVrm data, {
     required GltfDocument document,
@@ -194,12 +218,19 @@ class Vrm extends Component {
     player.update(deltaSeconds);
   }
 
+  /// Returns the human bone named [name], or null if the model lacks it.
   HumanBone? getBoneByName(HumanBoneName name) => _boneMap[name];
 
+  /// Creates a clip that plays [animation] on this model.
+  ///
+  /// The clip is registered with [player] and updated every frame until it
+  /// is removed with [removeAnimationClip]. Call [VrmAnimationClip.play] to
+  /// start playback.
   VrmAnimationClip createAnimationClip(VrmAnimation animation) {
     return player.createAnimationClip(animation, node);
   }
 
+  /// Unregisters [clip] so that it is no longer updated.
   void removeAnimationClip(VrmAnimationClip clip) {
     player.removeAnimationClip(clip);
   }

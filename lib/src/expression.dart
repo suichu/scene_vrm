@@ -2,10 +2,15 @@ import 'package:flutter_scene/scene.dart';
 import 'package:gltfx/gltfx.dart';
 import 'package:gltfx_ext_vrm/gltfx_ext_vrm.dart';
 
+/// A binding that an [Expression] drives with its weight.
 sealed class ExpressionBind {}
 
+/// Binds an expression to a morph target weight of a node.
 class ExpressionMorphBind extends ExpressionBind {
+  /// Node whose morph target is driven.
   final Node target;
+
+  /// Index of the morph target in [target].
   final int morph;
 
   /// Morph target weight when the expression weight is 1.0.
@@ -13,19 +18,24 @@ class ExpressionMorphBind extends ExpressionBind {
 
   ExpressionMorphBind(this.target, this.morph, {this.weight = 1.0});
 
+  /// Sets the morph target weight to [expressionWeight] scaled by [weight].
   void apply(double expressionWeight) {
     target.setMorphWeight(morph, expressionWeight * weight);
   }
 }
 
-/// Creates a [MorphBind] if [target] has a morph target at index [morph].
+/// Creates an [ExpressionMorphBind] if [target] has a morph target at index [morph].
 ExpressionMorphBind? _morphBind(Node target, int morph, double weight) {
   final count = target.morphWeights?.length ?? 0;
   if (morph < 0 || morph >= count) return null;
   return ExpressionMorphBind(target, morph, weight: weight);
 }
 
+/// A single facial expression (VRM 1.0 expression / VRM 0.x BlendShapeGroup).
+///
+/// Setting [weight] applies it to all [binds].
 class Expression {
+  /// Targets driven by this expression.
   final List<ExpressionBind> binds;
 
   /// If true, the weight is rounded to 0 or 1 using 0.5 as the threshold.
@@ -34,6 +44,9 @@ class Expression {
 
   Expression({this.binds = const [], this.isBinary = false});
 
+  /// Loads from a VRM 1.0 expression.
+  ///
+  /// Morph target binds whose node is not found under [node] are skipped.
   factory Expression.import(
     GltfDocument document,
     VrmcVrmExpression data, {
@@ -80,6 +93,9 @@ class Expression {
     return Expression(binds: binds, isBinary: data.isBinary ?? false);
   }
 
+  /// Current weight of the expression, in the range 0.0 to 1.0.
+  ///
+  /// Values outside the range are clamped when set.
   double get weight => _weight;
 
   set weight(double value) {
@@ -94,6 +110,9 @@ class Expression {
   }
 }
 
+/// The preset expressions defined by VRM.
+///
+/// Each field is null if the model does not define that expression.
 class ExpressionPreset {
   final Expression? happy;
   final Expression? angry;
@@ -136,8 +155,12 @@ class ExpressionPreset {
   });
 }
 
+/// All expressions of a model.
 class Expressions {
+  /// Preset expressions.
   final ExpressionPreset preset;
+
+  /// Custom (non-preset) expressions, keyed by name.
   final Map<String, Expression> custom;
 
   const Expressions({
@@ -145,6 +168,7 @@ class Expressions {
     this.custom = const {},
   });
 
+  /// Loads from VRM 1.0 `expressions`.
   factory Expressions.import(
     GltfDocument document,
     VrmcVrmExpressions data, {

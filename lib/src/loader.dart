@@ -9,11 +9,21 @@ import 'vrm.dart';
 import 'mtoon.dart';
 import 'node_constraint.dart';
 
+/// Loads a VRM model from the asset bundle.
+///
+/// [name] is the asset key passed to [rootBundle]. See [loadVrmBytes] for
+/// what is set up on the returned node.
 Future<Node> loadVrmAsset(String name) async {
   final blob = await rootBundle.load(name);
   return loadVrmBytes(blob.buffer.asUint8List());
 }
 
+/// Loads a VRM model from GLB bytes.
+///
+/// Both VRM 0.x (`VRM` extension) and VRM 1.0 (`VRMC_vrm` extension) are
+/// supported. The returned root node has a [Vrm] component attached, along
+/// with spring bone simulation, node constraints (1.0 only) and MToon
+/// materials when the model defines them.
 Future<Node> loadVrmBytes(Uint8List blob) async {
   final root = await Node.fromGlbBytes(blob);
   debugPrint("${root.children.map((c) => c.name)}");

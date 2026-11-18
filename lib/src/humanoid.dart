@@ -5,9 +5,15 @@ import 'package:vector_math/vector_math.dart';
 
 import 'gltfhelper.dart';
 
+/// Component attached to a node that serves as a humanoid bone.
 class HumanBone extends Component {
+  /// Bone name.
   final HumanBoneName name;
+
+  /// Local transform of the node in the rest pose.
   final Matrix4 localRestTransform;
+
+  /// World (model space) transform of the node in the rest pose.
   final Matrix4 worldRestTransform;
 
   HumanBone(
@@ -16,6 +22,10 @@ class HumanBone extends Component {
     required this.worldRestTransform,
   });
 
+  /// Transform of the bone relative to its rest pose.
+  ///
+  /// Setting it updates the node's local transform to
+  /// [localRestTransform] × value.
   Matrix4 get transform => localRestTransform.clone()
     ..invert()
     ..multiply(node.localTransform);
@@ -40,6 +50,10 @@ HumanBoneName humanBoneNameFromVrm0(
   _ => HumanBoneName.values.byName(bone.name),
 };
 
+/// The humanoid bones of a model (VRM 1.0 bone set).
+///
+/// Required bones are non-nullable; optional bones are null when the model
+/// does not have them.
 class HumanSkeleton {
   // Torso (required)
   final HumanBone hips;
@@ -103,6 +117,7 @@ class HumanSkeleton {
   final HumanBone? rightLittleIntermediate;
   final HumanBone? rightLittleDistal;
 
+  /// All bones that exist in the model.
   List<HumanBone> get all => [
     hips,
     spine,
@@ -309,6 +324,7 @@ class HumanSkeleton {
   });
 }
 
+/// Humanoid bone names as defined in VRM 1.0.
 enum HumanBoneName {
   hips("hips"),
   leftUpperLeg("leftUpperLeg"),
@@ -366,6 +382,7 @@ enum HumanBoneName {
   rightLittleIntermediate("rightLittleIntermediate"),
   rightLittleDistal("rightLittleDistal");
 
+  /// Bone name string as used in the VRM specification.
   final String name;
 
   const HumanBoneName(this.name);

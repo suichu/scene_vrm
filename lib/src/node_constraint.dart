@@ -4,7 +4,9 @@ import 'package:gltfx/gltfx.dart';
 import 'package:gltfx_ext_vrm/gltfx_ext_vrm.dart' as vrmext;
 import 'package:vector_math/vector_math.dart';
 
+/// Rotates [destination] so that its [axis] points toward [source].
 class AimConstraint extends NodeConstraint {
+  /// Local axis of [destination] that is aimed at [source].
   final vrmext.AimAxis axis;
   final Quaternion _destinationRestPose;
   final Vector3 _aimAxis;
@@ -63,7 +65,10 @@ class AimConstraint extends NodeConstraint {
   }
 }
 
+/// Transfers the rotation of [source] around [axis] (the roll component)
+/// to [destination].
 class RollConstraint extends NodeConstraint {
+  /// Roll axis, in the local space of [destination].
   final vrmext.RollAxis axis;
   final Quaternion _sourceRestPose;
   final Quaternion _destinationRestPose;
@@ -106,6 +111,7 @@ class RollConstraint extends NodeConstraint {
   }
 }
 
+/// Transfers the rotation of [source] from its rest pose to [destination].
 class RotationConstraint extends NodeConstraint {
   final Quaternion _sourceRestPose;
   final Quaternion _destinationRestPose;
@@ -134,8 +140,14 @@ class RotationConstraint extends NodeConstraint {
 /// Constraints are evaluated by [NodeConstraintSolver] so that they run in
 /// dependency order, not in scene traversal order.
 sealed class NodeConstraint {
+  /// Node whose rotation is written by this constraint.
   final Node destination;
+
+  /// Node whose transform is read by this constraint.
   final Node source;
+
+  /// Blend factor between the rest pose (0.0) and the fully constrained
+  /// rotation (1.0).
   final double weight;
 
   NodeConstraint({
@@ -144,6 +156,11 @@ sealed class NodeConstraint {
     this.weight = 1.0,
   });
 
+  /// Creates a constraint from the `VRMC_node_constraint` extension of the
+  /// node [destination].
+  ///
+  /// Throws [StateError] if the source node is not found under [root] or is
+  /// the same node as [destination].
   static NodeConstraint import(
     vrmext.VrmcNodeConstraint data, {
     required Node destination,
@@ -185,7 +202,10 @@ sealed class NodeConstraint {
   void apply();
 }
 
+/// Component that applies node constraints every frame.
 class NodeConstraintSolver extends Component {
+  /// Constraints, applied in list order. They must already be sorted by
+  /// dependency.
   final List<NodeConstraint> constraints;
 
   NodeConstraintSolver(this.constraints);
@@ -256,6 +276,11 @@ List<NodeConstraint> _sortConstraints(List<NodeConstraint> constraints) {
   return sorted;
 }
 
+/// Reads `VRMC_node_constraint` from every node in [document] and attaches a
+/// [NodeConstraintSolver] to [root].
+///
+/// Constraints that fail to load or form a circular dependency are skipped.
+/// Nothing is attached if the model has no constraints.
 void loadNodeConstraint({required GltfDocument document, required Node root}) {
   final constraints = <NodeConstraint>[];
 

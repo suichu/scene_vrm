@@ -144,12 +144,18 @@ class VrmAnimator {
   }
 }
 
+/// Animation data loaded from a VRMA (`VRMC_vrm_animation`) file.
+///
+/// Play it on a model with [Vrm.createAnimationClip].
 class VrmAnimation {
   final GltfDocument _document;
+
+  /// Length of the animation in seconds.
   final double endTime;
 
   VrmAnimation._({required this._document, required this.endTime});
 
+  /// Loads from VRMA (GLB) bytes. Only the first animation is used.
   factory VrmAnimation.fromBytes(Uint8List bytes) {
     final doc = Glb.parse(bytes, extensions: [vrmext.vrmcVrmAnimation]);
 
@@ -157,26 +163,41 @@ class VrmAnimation {
     return VrmAnimation._(document: doc, endTime: dur);
   }
 
+  /// Loads a VRMA file from the asset bundle.
   static Future<VrmAnimation> fromAsset(String name) async {
     final asset = await rootBundle.load(name);
     return VrmAnimation.fromBytes(asset.buffer.asUint8List());
   }
 }
 
+/// Playback state of a [VrmAnimation] bound to a model.
 class VrmAnimationClip {
   final VrmAnimator _animator;
+
+  /// End time in seconds, used as the loop length.
   double endTime;
+
+  /// Whether the clip advances on [update].
   bool playing = false;
+
+  /// Current playback position in seconds.
   double playbackTime = 0;
+
+  /// Whether playback wraps around at [endTime].
   bool loop = false;
 
+  /// Binds [animation] to the humanoid bones under [bindTarget].
   VrmAnimationClip(VrmAnimation animation, Node bindTarget)
     : _animator = VrmAnimator(animation, bindTarget),
       endTime = animation.endTime;
 
+  /// Starts (or resumes) playback.
   void play() => playing = true;
+
+  /// Pauses playback. [playbackTime] is kept.
   void stop() => playing = false;
 
+  /// Advances playback by [deltaSeconds] and applies the pose, if [playing].
   void update(double deltaSeconds) {
     if (playing) {
       var time = Duration(
@@ -193,9 +214,11 @@ class VrmAnimationClip {
   }
 }
 
+/// Manages and updates a set of [VrmAnimationClip]s.
 class VrmAnimationPlayer {
   final _clips = <VrmAnimationClip>[];
 
+  /// Creates a clip of [animation] bound to [bindTarget] and registers it.
   VrmAnimationClip createAnimationClip(
     VrmAnimation animation,
     Node bindTarget,
@@ -205,10 +228,12 @@ class VrmAnimationPlayer {
     return clip;
   }
 
+  /// Unregisters [clip].
   void removeAnimationClip(VrmAnimationClip clip) {
     _clips.remove(clip);
   }
 
+  /// Updates all registered clips by [deltaSeconds].
   void update(double deltaSeconds) {
     for (final clip in _clips) {
       clip.update(deltaSeconds);

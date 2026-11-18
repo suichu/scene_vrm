@@ -9,6 +9,7 @@ import 'package:gltfx/gltfx.dart';
 import 'package:vector_math/vector_math.dart';
 import 'package:gltfx_ext_vrm/gltfx_ext_vrm.dart';
 
+/// Material that renders with the MToon toon shader (`VRMC_materials_mtoon`).
 class MToonMaterial extends PreprocessedMaterial {
   MToonMaterial({
     required super.fragmentShader,

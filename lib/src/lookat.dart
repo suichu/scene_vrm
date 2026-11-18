@@ -8,10 +8,22 @@ import 'package:gltfx_ext_vrm/gltfx_ext_vrm.dart';
 import 'expression.dart';
 import 'humanoid.dart';
 
+/// Eye gaze control (VRM 1.0 `lookAt` / VRM 0.x `firstPerson`).
+///
+/// Gaze is applied either by rotating eye bones ([LookAtBoneBind]) or by
+/// driving lookUp / lookDown / lookLeft / lookRight expressions
+/// ([LookAtExpressionBind]), depending on the model.
 class LookAt {
-  final Node node; // Head node
+  /// Head node.
+  final Node node;
+
+  /// Position of the look-at origin (between the eyes), relative to [node].
   final Vector3 offset;
+
+  /// Left eye.
   final Eye leftEye;
+
+  /// Right eye.
   final Eye rightEye;
 
   LookAt({
@@ -21,13 +33,22 @@ class LookAt {
     required this.offset,
   });
 
+  /// Points both eyes in [direction].
+  ///
+  /// See [LookAtBind.apply] for how [direction] is interpreted.
   void direct(Vector2 direction) {
     rightEye.direction = direction;
     leftEye.direction = direction;
   }
 
+  /// Points the eyes at [target].
+  ///
+  /// Not implemented yet; currently does nothing.
   void lookAt(Vector3 target) {}
 
+  /// Loads from VRM 1.0 `lookAt`.
+  ///
+  /// Throws if the type is bone and the eye bones are missing.
   factory LookAt.import(
     VrmcVrmLookAt data, {
     required GltfDocument document,
@@ -174,15 +195,23 @@ class LookAt {
   }
 }
 
+/// Which eye an [Eye] represents.
 enum EyePosition { left, right }
 
+/// One eye whose gaze direction can be set.
 class Eye {
+  /// Whether this is the left or right eye.
   final EyePosition position;
+
+  /// Bind that applies the gaze to the model.
   final LookAtBind bind;
   final Vector2 _direction = Vector2.zero();
 
   Eye({required this.bind, required this.position});
 
+  /// Current gaze direction. Setting it applies the gaze through [bind].
+  ///
+  /// See [LookAtBind.apply] for how the value is interpreted.
   Vector2 get direction => _direction;
 
   set direction(Vector2 value) {
@@ -191,8 +220,12 @@ class Eye {
   }
 }
 
+/// Applies a gaze direction to the model.
 sealed class LookAtBind {
   /// Computes yaw / pitch (degrees) from [direction] and applies them.
+  ///
+  /// The components are the sines of the angles:
+  /// yaw = asin(-x), pitch = asin(y). See [applyYawPitch] for the signs.
   void apply(Vector2 direction) {
     final yaw = asin(-direction.x.clamp(-1.0, 1.0)) * 180 / pi;
     final pitch = asin(direction.y.clamp(-1.0, 1.0)) * 180 / pi;
@@ -203,8 +236,15 @@ sealed class LookAtBind {
   void applyYawPitch(double yaw, double pitch);
 }
 
+/// Linear range map from an input angle to an output value.
+///
+/// Corresponds to VRM 1.0 `rangeMap` and VRM 0.x degree map.
 class LookAtRange {
+  /// Maximum input angle in degrees. Larger inputs are clamped.
   final double inputMaxValue;
+
+  /// Output value at [inputMaxValue]: an angle in degrees for bone binds,
+  /// or an expression weight for expression binds.
   final double outputScale;
 
   LookAtRange({required this.inputMaxValue, required this.outputScale});
@@ -216,12 +256,24 @@ class LookAtRange {
   }
 }
 
+/// Expresses gaze by rotating an eye bone.
 class LookAtBoneBind extends LookAtBind {
+  /// Eye bone to rotate.
   final HumanBone bone;
+
+  /// Which eye [bone] is; decides which horizontal range is inner/outer.
   final EyePosition position;
+
+  /// Range for turning toward the nose.
   final LookAtRange horizontalInnerRange;
+
+  /// Range for turning away from the nose.
   final LookAtRange horizontalOuterRange;
+
+  /// Range for looking up.
   final LookAtRange verticalUpRange;
+
+  /// Range for looking down.
   final LookAtRange verticalDownRange;
 
   /// True if the model faces -Z (VRM 0.x).
@@ -283,12 +335,25 @@ class LookAtBoneBind extends LookAtBind {
 
 /// Expresses gaze via expressions (lookUp / lookDown / lookLeft / lookRight).
 class LookAtExpressionBind extends LookAtBind {
+  /// Expression driven when looking up.
   final Expression? lookUp;
+
+  /// Expression driven when looking down.
   final Expression? lookDown;
+
+  /// Expression driven when looking left.
   final Expression? lookLeft;
+
+  /// Expression driven when looking right.
   final Expression? lookRight;
+
+  /// Maps the horizontal angle to the lookLeft / lookRight weight.
   final LookAtRange horizontalOuterRange;
+
+  /// Maps the upward angle to the lookUp weight.
   final LookAtRange verticalUpRange;
+
+  /// Maps the downward angle to the lookDown weight.
   final LookAtRange verticalDownRange;
 
   LookAtExpressionBind({
