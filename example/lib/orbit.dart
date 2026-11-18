@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/gestures.dart';
@@ -83,7 +83,6 @@ class OrbitGestureDetectorState extends State<OrbitGestureDetector>
   double _scrollDirection = 0.0;
   double _currentPosition = 0.0;
   double _startDistance = 0.0;
-  PointerDeviceKind _kind = PointerDeviceKind.touch;
 
   @override
   void initState() {
@@ -148,7 +147,6 @@ class OrbitGestureDetectorState extends State<OrbitGestureDetector>
           onScaleStart: (details) {
             _ticker.stop();
             _startDistance = widget.controller.distance;
-            _kind = details.kind ?? PointerDeviceKind.touch;
           },
           onScaleUpdate: (details) {
             widget.controller.distance = _startDistance / details.scale;
