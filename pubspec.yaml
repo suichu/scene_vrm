@@ -1,6 +1,6 @@
 name: scene_vrm
 description: VRM loader for Flutter Scene.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/suichu/scene_vrm
 
 environment:
