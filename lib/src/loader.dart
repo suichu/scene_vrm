@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter/services.dart';
 import 'package:gltfx/gltfx.dart';
 import 'package:gltfx_ext_vrm/gltfx_ext_vrm.dart' as vrmext;
+import 'package:vector_math/vector_math.dart';
 
 import 'spring_bone.dart';
 import 'vrm.dart';
@@ -66,4 +69,7 @@ void _loadVrm0x(GltfDocument doc, vrmext.Vrm vrm, Node root) {
     final simulator = SpringBoneSimulator.fromVrm0(doc, secondary, root);
     if (simulator != null) root.addComponent(simulator);
   }
+
+  // VRM 0.x models need to be rotated 180 degrees around the Y axis to match the coordinate system.
+  root.rotation *= Quaternion.axisAngle(Vector3(0, 1, 0), pi);
 }
