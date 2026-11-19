@@ -35,6 +35,7 @@ Future<Node> loadVrmBytes(Uint8List blob) async {
 
   if (vrm0 != null) {
     _loadVrm0x(doc, vrm0, root);
+    await loadMToon(doc, root);
     return root;
   }
 

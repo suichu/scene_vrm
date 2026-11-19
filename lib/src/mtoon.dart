@@ -2,20 +2,24 @@ import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart' hide Texture;
 import 'package:flutter/painting.dart';
 import 'package:flutter_scene/gpu.dart';
-import 'package:flutter_scene/scene.dart';
+import 'package:flutter_scene/scene.dart' hide AlphaMode;
 import 'package:gltfx/gltfx.dart';
 import 'package:vector_math/vector_math.dart';
 import 'package:gltfx_ext_vrm/gltfx_ext_vrm.dart';
 
 /// Material that renders with the MToon toon shader (`VRMC_materials_mtoon`).
 class MToonMaterial extends PreprocessedMaterial {
+  final double alphaCutoff;
+
   MToonMaterial({
     required super.fragmentShader,
     required super.metadata,
     super.vertexShaders,
     super.radianceCubeFragmentShader,
+    this.alphaCutoff = 0.5,
   });
 
   @override
@@ -40,6 +44,8 @@ class MToonMaterial extends PreprocessedMaterial {
       "irradiance_field",
       lighting.environmentMap.diffuseShTexture,
     );
+
+    parameters.setFloat("alpha_cutoff", alphaCutoff);
 
     super.bind(pass, transientsBuffer, lighting);
   }
@@ -103,13 +109,23 @@ Future<void> loadMToon(GltfDocument document, Node root) async {
       final mtoon = source.mtoon;
       final mat = await loadFmatMaterial(
         "assets/mtoon.fmat",
-        factory:
-            ({required fragmentShader, required metadata, vertexShaders}) =>
-                MToonMaterial(
-                  fragmentShader: fragmentShader,
-                  metadata: metadata,
-                  vertexShaders: vertexShaders,
-                ),
+        factory: ({required fragmentShader, required metadata, vertexShaders}) {
+          final opaque = source!.alphaMode is! Blend;
+
+          metadata['depth_write'] = opaque || mtoon.transparentWithZWrite;
+          metadata['blending'] = opaque ? 'opaque' : 'alpha';
+
+          if (source.doubleSided) {
+            metadata['culling'] = 'none';
+          }
+
+          return MToonMaterial(
+            fragmentShader: fragmentShader,
+            metadata: metadata,
+            vertexShaders: vertexShaders,
+            alphaCutoff: source.alphaMode is Mask ? source.alphaCutoff : 0.0,
+          );
+        },
       );
 
       final mName = m.name;
@@ -332,6 +348,9 @@ class MToonSource {
   final Float32List? emissiveFactor;
   final TextureIdx? emissiveTexture;
   final double? emissiveStrength;
+  final AlphaMode alphaMode;
+  final double alphaCutoff;
+  final bool doubleSided;
 
   const MToonSource({
     required this.mtoon,
@@ -340,6 +359,9 @@ class MToonSource {
     this.emissiveFactor,
     this.emissiveTexture,
     this.emissiveStrength,
+    this.alphaMode = const Opaque(),
+    this.alphaCutoff = 0.5,
+    this.doubleSided = false,
   });
 
   factory MToonSource.fromGltf(GltfMaterial m, VrmcMaterialsMToon mtoon) =>
@@ -352,6 +374,9 @@ class MToonSource {
         emissiveStrength: m.extensions
             ?.get(khrMaterialsEmissiveStrength)
             ?.emissiveStrength,
+        alphaMode: m.alphaMode,
+        alphaCutoff: m.alphaCutoff,
+        doubleSided: m.doubleSided,
       );
 
   /// Converts from VRM 0.x `materialProperties`. Returns null if the shader is not `VRM/MToon`.
@@ -399,6 +424,10 @@ class MToonSource {
     final outlineColorMode = (f['_OutlineColorMode'] ?? 0).round();
 
     final matcapTexture = texInfo('_SphereAdd');
+    final isTransparent = m.keywordMap['_ALPHABLEND_ON'] == true;
+    final isCutoff = m.keywordMap['_ALPHATEST_ON'] == true;
+    final cullMode = f['_CullMode'] ?? 2;
+    final doubleSided = cullMode == 0;
 
     return MToonSource(
       mtoon: VrmcMaterialsMToon(
@@ -430,11 +459,21 @@ class MToonSource {
         // The UV V direction is reversed between 0.x and 1.0
         uvAnimationScrollYSpeedFactor: -(f['_UvAnimScrollY'] ?? 0.0),
         uvAnimationRotationSpeedFactor: f['_UvAnimRotation'] ?? 0.0,
+        transparentWithZWrite: f['z_write'] != null
+            ? f['z_write']! > 0.0
+            : false,
       ),
       baseColorFactor: color('_Color', alpha: true),
       baseColorTexture: tex('_MainTex'),
       emissiveFactor: color('_EmissionColor'),
       emissiveTexture: tex('_EmissionMap'),
+      alphaMode: isTransparent
+          ? const Blend()
+          : isCutoff
+          ? const Mask()
+          : const Opaque(),
+      alphaCutoff: isCutoff ? f['_Cutoff'] ?? 0.5 : 0.5,
+      doubleSided: doubleSided,
     );
   }
 }

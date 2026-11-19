@@ -166,7 +166,17 @@ class _ViewerState extends State<_Viewer> with SingleTickerProviderStateMixin {
           );
 
           scene.add(avatar);
+          scene.directionalLight = DirectionalLight(
+            direction: vm32.Vector3(
+              0.3,
+              -1.0,
+              0.2,
+            ), // the way the light travels
+            intensity: 1,
+            castsShadow: true,
+          );
           scene.environment = env;
+          scene.environmentIntensity = 0.75;
 
           orbit.addListener(() {
             setState(() {
