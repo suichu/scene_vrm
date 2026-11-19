@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter/services.dart';
 import 'package:gltfx/gltfx.dart';
@@ -29,7 +28,6 @@ Future<Node> loadVrmAsset(String name) async {
 /// materials when the model defines them.
 Future<Node> loadVrmBytes(Uint8List blob) async {
   final root = await Node.fromGlbBytes(blob);
-  debugPrint("${root.children.map((c) => c.name)}");
 
   final doc = Glb.parse(blob, extensions: [...vrmext.vrmc, vrmext.vrm]);
 
